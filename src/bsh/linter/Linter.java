@@ -1,6 +1,5 @@
 package bsh.linter;
 
-import java.io.BufferedReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayDeque;
@@ -9,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import bsh.JavaCharStream;
+import bsh.ParseException;
 import bsh.Parser;
 import bsh.ParserTokenManager;
 import bsh.Token;
@@ -47,9 +47,19 @@ public class Linter {
 	}
 	
 	private void analyzeStack(Deque<Token> methodStack) {
-		System.out.println(methodStack);
+		System.out.println(methodStack + "\n");
+		StringBuilder builder = new StringBuilder();
 		while ( !methodStack.isEmpty() ) {
-			methodStack.pop();
+			builder.append(methodStack.removeLast().image);
+		}
+		System.out.println(builder.toString() + "\n");
+		Parser parser = new Parser(new StringReader(builder.toString()));
+		try {
+			while ( parser.Line() ) {
+				parser.popNode();
+			}
+		} catch (ParseException e) {
+			System.out.println("error: " + e.getMessage() + "\n");
 		}
 	}
 }
