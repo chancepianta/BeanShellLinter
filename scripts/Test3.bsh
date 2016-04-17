@@ -1,0 +1,8 @@
+System.out.println("Test3.bsh");
+
+boolean someMethod() {
+	System.out.println("Missing double quotes);
+	return true;
+}
+
+System.out.println("End of Script");

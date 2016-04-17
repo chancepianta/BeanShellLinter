@@ -1,0 +1,7 @@
+System.out.println("Test2.bsh");
+
+boolean someMethod()) {
+	return true;
+}
+
+System.out.println("End of Script");

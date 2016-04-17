@@ -1,0 +1,11 @@
+System.out.println("Test1.bsh");
+
+System.out.println("Missing semicolon");;
+
+someMethod() {
+System.out.println("somemeth");
+}
+
+someMethod();
+
+System.out.println("End of Script");
