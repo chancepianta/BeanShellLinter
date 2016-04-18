@@ -16,30 +16,27 @@ import bsh.ParserTokenManager;
 import bsh.Token;
 
 public class Linter {
-	private Map<String,String> errors = new HashMap<String,String>();
-	
-	public Map<String,String> getErrors() {
-		return this.errors;
-	}
-	
 	/**
 	 * Method performs 'linting' of a BeanShell script provided a reader object.
 	 * We want the script passed in via a reader implementation as we leverage
 	 * BeanShell's JavaCharStream object for lexing purposes and it loves readers.
+	 * This method will return a map of any errors found in the provided script with
+	 * the key/value pairs of the map being the line # and error detected.
 	 * 
 	 * @param reader
 	 * @return
 	 */
-	public Map<String,String> lint(Reader reader) {
+	public static Map<String,String> lint(Reader reader) {
+		Map<String,String> errors = new HashMap<String,String>(); // A map of the error in the script
 		// Get list of different vectors from the provided script
 		// In this sense a vector will either be a method definition
 		// or a single line that could be a method call or assignment
 		List<Vector<Token>> vectors = getVectors(reader);
 		for (Vector<Token> vector : vectors) {
-			analyzeVector(vector); // Analyze each vector for errors
+			analyzeVector(vector, errors); // Analyze each vector for errors
 		}
 		// return the errors
-		return this.getErrors();
+		return errors;
 	}
 	
 	/**
@@ -50,7 +47,7 @@ public class Linter {
 	 * 
 	 * @param methodVector
 	 */
-	private void analyzeVector(Vector<Token> methodVector) {
+	private static void analyzeVector(Vector<Token> methodVector, Map<String,String> errors) {
 		// Build a string to pass to the parse for checking
 		StringBuilder builder = new StringBuilder();
 		Iterator<Token> iterator = methodVector.iterator();
@@ -67,7 +64,7 @@ public class Linter {
 			}
 		} catch (ParseException e) {
 			// Catch the error to return back
-			addError(methodVector, builder.toString(), e.getMessage());
+			addError(methodVector, builder.toString(), e.getMessage(), errors);
 		}
 	}
 	
@@ -80,7 +77,7 @@ public class Linter {
 	 * @param reader
 	 * @return
 	 */
-	private List<Vector<Token>> getVectors(Reader reader) {
+	private static List<Vector<Token>> getVectors(Reader reader) {
 		List<Vector<Token>> vectors = new ArrayList<Vector<Token>>(); // List of tokens to return
 		ParserTokenManager ptk = new ParserTokenManager(new JavaCharStream(reader)); // Leverage the ptk as a lexer
 		Token token = ptk.getNextToken(); // Current token from reader
@@ -111,11 +108,21 @@ public class Linter {
 	 * @param evaluatedScript
 	 * @param error
 	 */
-	private void addError(Vector<Token> originalVector, String evaluatedScript, String error) {
+	private static void addError(Vector<Token> originalVector, String evaluatedScript, String error, Map<String,String> errors) {
 		// Error messages will be in the format of
 		// error: Parse error at line #, column #.  <cause>
 		String[] values = error.split("\\."); // So we'll split on the '.'
 		values[0] = values[0].replaceFirst("[0-9]", "").replaceAll("\\D", ""); // get the column number so we can find the token
 		values[1] = values[1].trim(); // Clean up the error message
+		List<Vector<Token>> vectors = getVectors(new StringReader(evaluatedScript)); // turn the erroneous script into a token vector
+		for (Token errorToken : vectors.get(0)) {
+			if ( errorToken.beginColumn == Integer.valueOf(values[0]) ) { // We found our erroneous token
+				for (Token token : originalVector) { // Now to find the original token...
+					if ( errorToken.image.equals(token.image) ) {
+						errors.put(String.valueOf(token.beginLine), values[1]); // Add the line #/error message pair
+					}
+				}
+			}
+		}
 	}
 }
