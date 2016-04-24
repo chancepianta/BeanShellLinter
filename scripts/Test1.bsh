@@ -1,10 +1,11 @@
 System.out.println("Test1.bsh");
 
-System.out.println("Missing semicolon");;
+System.out.println("Missing semicolon")
 
 someMethod() {
-System.out.println("somemeth");
+	System.out.println("somemeth");
 }
+
 
 someMethod();
 

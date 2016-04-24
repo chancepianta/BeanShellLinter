@@ -4,4 +4,12 @@ boolean someMethod()) {
 	return true;
 }
 
+String someMethodAgain() {
+	return "Missing double quotes;
+}
+
+String noReturn(() {
+	System.out.pritln("Forgot to return");
+}
+
 System.out.println("End of Script");
