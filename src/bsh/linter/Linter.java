@@ -1,5 +1,7 @@
 package bsh.linter;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -25,13 +27,14 @@ public class Linter {
 	 * 
 	 * @param reader
 	 * @return
+	 * @throws IOException 
 	 */
-	public static Map<String,String> lint(Reader reader) {
+	public static Map<String,String> lint(Reader reader) throws IOException {
 		Map<String,String> errors = new HashMap<String,String>(); // A map of the error in the script
 		// Get list of different vectors from the provided script
 		// In this sense a vector will either be a method definition
 		// or a single line that could be a method call or assignment
-		List<Vector<Token>> vectors = getVectors(reader);
+		List<Vector<Token>> vectors = getVectors(reader, errors);
 		for (Vector<Token> vector : vectors) {
 			analyzeVector(vector, errors); // Analyze each vector for errors
 		}
@@ -46,8 +49,9 @@ public class Linter {
 	 * let BeanShell's Parser object find the syntax errors in the vector.
 	 * 
 	 * @param methodVector
+	 * @throws IOException 
 	 */
-	private static void analyzeVector(Vector<Token> methodVector, Map<String,String> errors) {
+	private static void analyzeVector(Vector<Token> methodVector, Map<String,String> errors) throws IOException {
 		// Build a string to pass to the parse for checking
 		StringBuilder builder = new StringBuilder();
 		Iterator<Token> iterator = methodVector.iterator();
@@ -76,10 +80,28 @@ public class Linter {
 	 * 
 	 * @param reader
 	 * @return
+	 * @throws IOException 
 	 */
-	private static List<Vector<Token>> getVectors(Reader reader) {
+	private static List<Vector<Token>> getVectors(Reader reader, Map<String,String> errors) throws IOException {
 		List<Vector<Token>> vectors = new ArrayList<Vector<Token>>(); // List of tokens to return
-		ParserTokenManager ptk = new ParserTokenManager(new JavaCharStream(reader)); // Leverage the ptk as a lexer
+		
+		BufferedReader br = new BufferedReader(reader); // Remove any lines with unmatched double quotes so the lexer doesn't blow up
+		StringBuilder builder = new StringBuilder(); // This will hold a cleaned copy of the script
+		int currLine = 1; // Keep track of the current line
+		String line = null;
+		while ( (line = br.readLine()) != null ) {
+			if ( line.split("\"").length % 2 == 0 ) { // We can split on double quotes and if the length is odd then we have open double quotes
+				errors.put(String.valueOf(currLine), "Missing double quotes"); // Add the line with the missing double quotes to the errors
+			} else {
+				builder.append(line);
+			}
+			builder.append("\n"); // Append a new line so that we can build proper vectors
+			currLine++; // On to the next line
+		}
+		br.close();
+		
+		
+		ParserTokenManager ptk = new ParserTokenManager(new JavaCharStream(new StringReader(builder.toString()))); // Leverage the ptk as a lexer
 		Token token = ptk.getNextToken(); // Current token from reader
 		boolean hasLeftBrace = false; // We'll use this to track vectors that are method bodies
 		Vector<Token> vector = new Vector<Token>(); // Current vector being built
@@ -107,19 +129,21 @@ public class Linter {
 	 * @param originalVector
 	 * @param evaluatedScript
 	 * @param error
+	 * @throws IOException 
 	 */
-	private static void addError(Vector<Token> originalVector, String evaluatedScript, String error, Map<String,String> errors) {
+	private static void addError(Vector<Token> originalVector, String evaluatedScript, String error, Map<String,String> errors) throws IOException {
 		// Error messages will be in the format of
 		// error: Parse error at line #, column #.  <cause>
 		String[] values = error.split("\\."); // So we'll split on the '.'
 		values[0] = values[0].replaceFirst("[0-9]", "").replaceAll("\\D", ""); // get the column number so we can find the token
 		values[1] = values[1].trim(); // Clean up the error message
-		List<Vector<Token>> vectors = getVectors(new StringReader(evaluatedScript)); // turn the erroneous script into a token vector
+		List<Vector<Token>> vectors = getVectors(new StringReader(evaluatedScript), errors); // turn the erroneous script into a token vector
 		for (Token errorToken : vectors.get(0)) {
 			if ( errorToken.beginColumn == Integer.valueOf(values[0]) ) { // We found our erroneous token
 				for (Token token : originalVector) { // Now to find the original token...
 					if ( errorToken.image.equals(token.image) ) {
 						errors.put(String.valueOf(token.beginLine), values[1]); // Add the line #/error message pair
+						break;
 					}
 				}
 			}
