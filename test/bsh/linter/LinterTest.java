@@ -54,4 +54,17 @@ public class LinterTest {
 		Map<String,String> errors = Linter.lint(br);
 		Assert.assertEquals(0, errors.size());
 	}
+	
+	/**
+	 * Test for if-else and do-while statements
+	 * @throws IOException
+	 */
+	@Test
+	public void TestScript4() throws IOException {
+		FileInputStream fis = new FileInputStream(new File("scripts/Test4.bsh"));
+		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+		
+		Map<String,String> errors = Linter.lint(br);
+		Assert.assertEquals(0, errors.size());
+	}
 }
