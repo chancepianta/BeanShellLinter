@@ -9,33 +9,35 @@ import bsh.ParserTokenManager;
 import bsh.Token;
 
 public class ControlFlowGraph {
-	private Map<Vector<Token>, Vector<Block>> blocks = new HashMap<Vector<Token>, Vector<Block>>();
-	private Map<Vector<Token>, Map<Block, Set<Block>>> edges = new HashMap<Vector<Token>, Map<Block, Set<Block>>>();
+	private Map<String, Vector<Block>> blocks = new HashMap<String, Vector<Block>>();
+	private Map<String, Map<Block, Set<Block>>> edges = new HashMap<String, Map<Block, Set<Block>>>();
 	
-	public Map<Vector<Token>, Vector<Block>> getBlocks() {
+	public Map<String, Vector<Block>> getBlocks() {
 		return this.blocks;
 	}
 	
-	public Map<Vector<Token>, Map<Block, Set<Block>>> getEdges() {
+	public Map<String, Map<Block, Set<Block>>> getEdges() {
 		return this.edges;
 	}
 	
-	public void addBlock(Vector<Token> vector, int startPosition, int endPosition, Vector<Token> tokens, Integer kind) {
-		this.addBlock(vector, new Block(startPosition, endPosition, tokens, kind));
+	public void addBlock(String scope, int startPosition, int endPosition, Vector<Token> tokens, Integer kind) {
+		this.addBlock(scope, new Block(startPosition, endPosition, tokens, kind));
 	}
 	
-	public void addBlock(Vector<Token> vector, Block block) {
-		if ( this.blocks.containsKey(vector) ) {
-			this.blocks.get(vector).add(block);
+	public void addBlock(String scope, Block block) {
+		if ( this.blocks.containsKey(scope) ) {
+			this.blocks.get(scope).add(block);
 		} else {
 			Vector<Block> blockVector = new Vector<Block>();
 			blockVector.add(block);
-			this.blocks.put(vector, blockVector);
+			this.blocks.put(scope, blockVector);
 		}
 	}
 	
-	public void setBlocks(Vector<Token> vector, Vector<Block> blocks) {
-		this.blocks.put(vector, blocks);
+	public void addBlocks(String scope, Vector<Block> blocks) {
+		if( this.blocks.containsKey(scope) )
+			this.blocks.get(scope).addAll(blocks);
+		else this.blocks.put(scope, blocks);
 	}
 	
 	public String toJSON() {
@@ -44,7 +46,11 @@ public class ControlFlowGraph {
 	
 
 	public void findEdges() {
-		System.out.println("findEdges()");
+		for (String scope : this.blocks.keySet()) {
+			for (int i = 0; i < this.blocks.get(scope).size(); i++) {
+				
+			}
+		}
 	}
 	
 	public static class Block {

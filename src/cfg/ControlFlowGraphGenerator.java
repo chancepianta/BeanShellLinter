@@ -20,6 +20,7 @@ public class ControlFlowGraphGenerator {
 			int currPosition = 0;
 			ControlFlowGraph.Block currBlock = new ControlFlowGraph.Block(currPosition, 0, null, null);
 			Vector<Token> currBlockTokens = new Vector<Token>();
+			String methodName = "";
 			
 			for (Token token : vector) {
 				if ( token.kind == ParserTokenManager.IF
@@ -33,7 +34,13 @@ public class ControlFlowGraphGenerator {
 					currBlock.setKind(token.kind);
 					currBlock.setStartPosition(currPosition);
 				}
-				if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
+				if ( token.kind == ParserTokenManager.LBRACE 
+						&& methodName.isEmpty()
+						&& !(methodName = getMethodName(currBlockTokens)).isEmpty() ) {
+					System.out.println(methodName);
+					currBlock = new ControlFlowGraph.Block(currPosition + 1, 0, null, null);
+					currBlockTokens = new Vector<Token>();
+				} else if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
 						|| ( token.kind == ParserTokenManager.SEMICOLON && currBlock.getKind() == null ) ) {
 					currBlockTokens.add(token);
 					currBlock.setStatements(currBlockTokens);
@@ -53,8 +60,20 @@ public class ControlFlowGraphGenerator {
 				currBlock.setEndPosition(currPosition);
 				blocks.add(currBlock);
 			}
-			if ( !blocks.isEmpty() ) graph.setBlocks(vector, blocks);
+			if ( !blocks.isEmpty() && methodName.isEmpty() ) graph.addBlocks("global", blocks);
+			else if ( !blocks.isEmpty() ) graph.addBlocks(methodName, blocks);
 		}
 		return graph;
+	}
+	
+	private static String getMethodName(Vector<Token> tokens) {
+		String methodName = "";
+		for (int i = 0; i < tokens.size(); i++) {
+			if ( tokens.get(i).kind == ParserTokenManager.LPAREN ) {
+				methodName = tokens.get(i - 1).image;
+				break;
+			}
+		}
+		return methodName;
 	}
 }
