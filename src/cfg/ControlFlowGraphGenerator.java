@@ -15,13 +15,12 @@ public class ControlFlowGraphGenerator {
 		
 		List<Vector<Token>> vectors = Linter.getVectors(reader);
 		for (Vector<Token> vector : vectors) {
-			StringBuilder blockBuilder = new StringBuilder();
-			StringBuilder vectorBuilder = new StringBuilder();
-			
 			Vector<ControlFlowGraph.Block> blocks = new Vector<ControlFlowGraph.Block>();
 			
 			int currPosition = 0;
 			ControlFlowGraph.Block currBlock = new ControlFlowGraph.Block(currPosition, 0, null, null);
+			Vector<Token> currBlockTokens = new Vector<Token>();
+			
 			for (Token token : vector) {
 				if ( token.kind == ParserTokenManager.IF
 					|| token.kind == ParserTokenManager.ELSE
@@ -36,43 +35,25 @@ public class ControlFlowGraphGenerator {
 				}
 				if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
 						|| ( token.kind == ParserTokenManager.SEMICOLON && currBlock.getKind() == null ) ) {
-					if ( blockBuilder.toString().endsWith(";") ) {
-						blockBuilder.append(" ");
-						vectorBuilder.append(" ");
-					}
-					blockBuilder.append(token.image);
-					vectorBuilder.append(token.image);
-					
-					currBlock.setStatements(blockBuilder.toString().trim());
+					currBlockTokens.add(token);
+					currBlock.setStatements(currBlockTokens);
 					currBlock.setEndPosition(currPosition);
 					blocks.add(currBlock);
-					currBlock = new ControlFlowGraph.Block(currPosition + 1, 0, null, null);
 					
-					blockBuilder = new StringBuilder();
+					currBlock = new ControlFlowGraph.Block(currPosition + 1, 0, null, null);
+					currBlockTokens = new Vector<Token>();
 				} else {
-					if ( token.kind != ParserTokenManager.SEMICOLON
-							&& token.kind != ParserTokenManager.LPAREN
-							&& token.kind != ParserTokenManager.RPAREN
-							&& token.kind != ParserTokenManager.INCR
-							&& token.kind != ParserTokenManager.DECR 
-							&& !blockBuilder.toString().endsWith("(") ) {
-						blockBuilder.append(" ");
-						vectorBuilder.append(" ");
-					}
-					blockBuilder.append(token.image);
-					vectorBuilder.append(token.image);
+					currBlockTokens.add(token);
 				}
 				currPosition++;
 			}
-			if ( blockBuilder.toString().trim().length() > 1
+			if ( currBlockTokens.size() > 1
 					&& currBlock.getStatements() == null ) {
-				currBlock.setStatements(blockBuilder.toString().trim());
+				currBlock.setStatements(currBlockTokens);
 				currBlock.setEndPosition(currPosition);
 				blocks.add(currBlock);
 			}
-			for (ControlFlowGraph.Block block : blocks) {
-				graph.addBlock(vectorBuilder.toString(), block);
-			}
+			if ( !blocks.isEmpty() ) graph.setBlocks(vector, blocks);
 		}
 		return graph;
 	}
