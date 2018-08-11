@@ -15,9 +15,13 @@ public class ControlFlowGraphGenerator {
 		
 		List<Vector<Token>> vectors = Linter.getVectors(reader);
 		for (Vector<Token> vector : vectors) {
-			ControlFlowGraph.Block currBlock = new ControlFlowGraph.Block(0, 0, null, null);
-			StringBuilder builder = new StringBuilder();
+			StringBuilder blockBuilder = new StringBuilder();
+			StringBuilder vectorBuilder = new StringBuilder();
+			
+			Vector<ControlFlowGraph.Block> blocks = new Vector<ControlFlowGraph.Block>();
+			
 			int currPosition = 0;
+			ControlFlowGraph.Block currBlock = new ControlFlowGraph.Block(currPosition, 0, null, null);
 			for (Token token : vector) {
 				if ( token.kind == ParserTokenManager.IF
 					|| token.kind == ParserTokenManager.ELSE
@@ -28,30 +32,46 @@ public class ControlFlowGraphGenerator {
 					|| token.kind == ParserTokenManager.DO
 					|| token.kind == ParserTokenManager.WHILE ) {
 					currBlock.setKind(token.kind);
-				} else if ( token.kind == ParserTokenManager.LBRACE 
-						&& ( currBlock.getKind() != null || builder.toString().endsWith(")") ) ) {
-					builder = new StringBuilder();
 					currBlock.setStartPosition(currPosition);
-				} else if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
+				}
+				if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
 						|| ( token.kind == ParserTokenManager.SEMICOLON && currBlock.getKind() == null ) ) {
-					if ( token.kind == ParserTokenManager.SEMICOLON )
-						builder.append(token.image);
-					currBlock.setStatements(builder.toString().trim());
+					if ( blockBuilder.toString().endsWith(";") ) {
+						blockBuilder.append(" ");
+						vectorBuilder.append(" ");
+					}
+					blockBuilder.append(token.image);
+					vectorBuilder.append(token.image);
+					
+					currBlock.setStatements(blockBuilder.toString().trim());
 					currBlock.setEndPosition(currPosition);
-					graph.addBlock(vector, currBlock);
+					blocks.add(currBlock);
 					currBlock = new ControlFlowGraph.Block(currPosition + 1, 0, null, null);
-					builder = new StringBuilder();
+					
+					blockBuilder = new StringBuilder();
 				} else {
-					if ( token.kind != ParserTokenManager.SEMICOLON )
-						builder.append(" ");
-					builder.append(token.image);
+					if ( token.kind != ParserTokenManager.SEMICOLON
+							&& token.kind != ParserTokenManager.LPAREN
+							&& token.kind != ParserTokenManager.RPAREN
+							&& token.kind != ParserTokenManager.INCR
+							&& token.kind != ParserTokenManager.DECR 
+							&& !blockBuilder.toString().endsWith("(") ) {
+						blockBuilder.append(" ");
+						vectorBuilder.append(" ");
+					}
+					blockBuilder.append(token.image);
+					vectorBuilder.append(token.image);
 				}
 				currPosition++;
 			}
-			if ( !builder.toString().isEmpty() && currBlock.getStatements() == null ) {
-				currBlock.setStatements(builder.toString().trim());
+			if ( blockBuilder.toString().trim().length() > 1
+					&& currBlock.getStatements() == null ) {
+				currBlock.setStatements(blockBuilder.toString().trim());
 				currBlock.setEndPosition(currPosition);
-				graph.addBlock(vector, currBlock);
+				blocks.add(currBlock);
+			}
+			for (ControlFlowGraph.Block block : blocks) {
+				graph.addBlock(vectorBuilder.toString(), block);
 			}
 		}
 		return graph;
