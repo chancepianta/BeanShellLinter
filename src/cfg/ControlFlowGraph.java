@@ -1,9 +1,9 @@
 package cfg;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.Vector;
 
 import bsh.ParserTokenManager;
@@ -47,9 +47,18 @@ public class ControlFlowGraph {
 		if ( this.edges.containsKey(fromBlock) ) {
 			this.edges.get(fromBlock).add(toBlock);
 		} else {
-			Set<Block> set = new HashSet<Block>();
+			Set<Block> set = new TreeSet<Block>();
 			set.add(toBlock);
 			this.edges.put(fromBlock, set);
+		}
+	}
+	
+	public void addEdges(Block block, Set<Block> edges) {
+		if ( this.edges.containsKey(block) ) {
+			Set<Block> treeSet = new TreeSet<Block>(edges);
+			this.edges.get(block).addAll(treeSet);
+		} else {
+			this.edges.put(block, edges);
 		}
 	}
 	
@@ -79,7 +88,15 @@ public class ControlFlowGraph {
 		}
 	}
 	
-	public static class Block {
+	public Map<String,Object> evalCoverage(Map<String,Object> args) {
+		Map<String,Object> map = new HashMap<String,Object>();
+		if ( this.getBlocks("global") != null 
+				&& !this.getBlocks("global").isEmpty() ) {
+		}
+		return map;
+	}
+	
+	public static class Block implements Comparable {
 		private int startPosition, endPosition;
 		private boolean containsReturn, isLogical;
 		private Vector<Token> tokens;
@@ -174,6 +191,16 @@ public class ControlFlowGraph {
 				builder.append(token.image);
 			}
 			return this.scope + ": " + builder.toString().trim();
+		}
+		
+		@Override
+		public int compareTo(Object anotherBlock) {
+			if ( anotherBlock instanceof Block )
+				return new Integer(this.getEndPosition())
+						.compareTo(new Integer(((Block) anotherBlock).getEndPosition()));
+			else
+				return new Integer(this.hashCode())
+						.compareTo(new Integer(anotherBlock.hashCode()));
 		}
 		
 		private boolean hasReturnToken(Vector<Token> tokens) {
