@@ -64,10 +64,8 @@ public class ControlFlowGraph {
 			for (int j = i - 1; j > -1; j--) {
 				if ( this.blocks.get(j).getScope().equals(currBlock.getScope()) ) {
 					if ( this.blocks.get(j).containsReturn() 
-							|| ( this.blocks.get(i).isLogical() && this.blocks.get(j).isLogical() ) ) continue;
-					else if ( this.blocks.get(j).getScope().equals(this.blocks.get(i).getScope()) )
-						this.addEdge(this.blocks.get(j), currBlock);
-					break;
+							|| ( currBlock.isLogical() && this.blocks.get(j).isLogical() ) ) continue;
+					this.addEdge(this.blocks.get(j), currBlock);
 				}
 			}
 		}
@@ -159,8 +157,10 @@ public class ControlFlowGraph {
 						&& token.kind != ParserTokenManager.LPAREN
 						&& token.kind != ParserTokenManager.RPAREN
 						&& token.kind != ParserTokenManager.INCR
-						&& token.kind != ParserTokenManager.DECR 
-						&& !builder.toString().endsWith("(") ) {
+						&& token.kind != ParserTokenManager.DECR
+						&& token.kind != ParserTokenManager.DOT
+						&& !builder.toString().endsWith("(")
+						&& !builder.toString().endsWith(".") ) {
 					builder.append(" ");
 				}
 				builder.append(token.image);
