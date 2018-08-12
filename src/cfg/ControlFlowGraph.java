@@ -59,6 +59,7 @@ public class ControlFlowGraph {
 	
 
 	public void findEdges() {
+		// Build initial graph without method invocations
 		for (int i = 0; i < this.blocks.size(); i++) {
 			Block currBlock = this.blocks.get(i);
 			for (int j = i - 1; j > -1; j--) {
@@ -67,6 +68,13 @@ public class ControlFlowGraph {
 							|| ( currBlock.isLogical() && this.blocks.get(j).isLogical() ) ) continue;
 					this.addEdge(this.blocks.get(j), currBlock);
 				}
+			}
+		}
+		// Check for method invocations and add edges as appropriate
+		for (Block block : this.blocks) {
+			for (Token token : block.getTokens()) {
+				Vector<Block> scopeBlocks = this.getBlocks(token.image);
+				if ( scopeBlocks != null && !scopeBlocks.isEmpty() ) this.addEdge(block, scopeBlocks.get(0));
 			}
 		}
 	}
@@ -98,7 +106,7 @@ public class ControlFlowGraph {
 			return this.endPosition;
 		}
 		
-		public Vector<Token> getStatements() {
+		public Vector<Token> getTokens() {
 			return this.tokens;
 		}
 		
@@ -126,7 +134,7 @@ public class ControlFlowGraph {
 			this.endPosition = endPosition;
 		}
 		
-		public void setStatements(Vector<Token> tokens) {
+		public void setTokens(Vector<Token> tokens) {
 			this.containsReturn = hasReturnToken(tokens);
 			this.isLogical = isLogical(tokens);
 			this.tokens = tokens;

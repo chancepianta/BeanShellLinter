@@ -42,7 +42,7 @@ public class ControlFlowGraphGenerator {
 				} else if ( ( token.kind == ParserTokenManager.RBRACE && currBlock.getKind() != null )
 						|| ( token.kind == ParserTokenManager.SEMICOLON && currBlock.getKind() == null ) ) {
 					currBlockTokens.add(token);
-					currBlock.setStatements(currBlockTokens);
+					currBlock.setTokens(currBlockTokens);
 					currBlock.setEndPosition(currPosition);
 					blocks.add(currBlock);
 					
@@ -54,8 +54,8 @@ public class ControlFlowGraphGenerator {
 				currPosition++;
 			}
 			if ( currBlockTokens.size() > 1
-					&& currBlock.getStatements() == null ) {
-				currBlock.setStatements(currBlockTokens);
+					&& currBlock.getTokens() == null ) {
+				currBlock.setTokens(currBlockTokens);
 				currBlock.setEndPosition(currPosition);
 				blocks.add(currBlock);
 			}
