@@ -18,53 +18,61 @@ public class LinterTest {
 	 */
 	@Test
 	public void TestScript1() throws IOException {
-		FileInputStream fis = new FileInputStream(new File("scripts/Test1.bsh"));
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-		
-		Map<String,String> errors = Linter.lint(br);
-		Assert.assertEquals(1, errors.size());
-		Assert.assertTrue(errors.containsKey("5"));
+		try (FileInputStream fis = new FileInputStream(new File("scripts/Test1.bsh"));
+				BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
+
+			Map<String,String> errors = Linter.lint(br);
+			Assert.assertEquals(1, errors.size());
+			Assert.assertTrue(errors.containsKey("5"));
+			Assert.assertEquals("Encountered:  <IDENTIFIER> \"someMethod\"", errors.get("5"));
+		}
 	}
-	
+
 	/**
 	 * Test for multiple errors in a script
 	 * @throws IOException
 	 */
 	@Test
 	public void TestScript2() throws IOException {
-		FileInputStream fis = new FileInputStream(new File("scripts/Test2.bsh"));
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-		
-		Map<String,String> errors = Linter.lint(br);
-		Assert.assertEquals(3, errors.size());
-		Assert.assertTrue(errors.containsKey("3"));
-		Assert.assertTrue(errors.containsKey("8"));
-		Assert.assertTrue(errors.containsKey("11"));
+		try (FileInputStream fis = new FileInputStream(new File("scripts/Test2.bsh"));
+				BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
+
+			Map<String,String> errors = Linter.lint(br);
+			Assert.assertEquals(3, errors.size());
+			Assert.assertTrue(errors.containsKey("3"));
+			Assert.assertEquals("Encountered:  \")\" \")\"", errors.get("3"));
+			Assert.assertTrue(errors.containsKey("8"));
+			Assert.assertEquals("Encountered: \"\\n\" (10), after : \"\\\"Missing double quotes;\"", errors.get("8"));
+			Assert.assertTrue(errors.containsKey("11"));
+			Assert.assertEquals("Encountered:  \"(\" \"(\"", errors.get("11"));
+		}
 	}
-	
+
 	/**
 	 * Test for no errors in the script
 	 * @throws IOException
 	 */
 	@Test
 	public void TestScript3() throws IOException {
-		FileInputStream fis = new FileInputStream(new File("scripts/Test3.bsh"));
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-		
-		Map<String,String> errors = Linter.lint(br);
-		Assert.assertEquals(0, errors.size());
+		try (FileInputStream fis = new FileInputStream(new File("scripts/Test3.bsh"));
+				BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
+
+			Map<String,String> errors = Linter.lint(br);
+			Assert.assertEquals(0, errors.size());
+		}
 	}
-	
+
 	/**
 	 * Test for if-else and do-while statements
 	 * @throws IOException
 	 */
 	@Test
 	public void TestScript4() throws IOException {
-		FileInputStream fis = new FileInputStream(new File("scripts/Test4.bsh"));
-		BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-		
-		Map<String,String> errors = Linter.lint(br);
-		Assert.assertEquals(0, errors.size());
+		try (FileInputStream fis = new FileInputStream(new File("scripts/Test4.bsh"));
+				BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
+
+			Map<String,String> errors = Linter.lint(br);
+			Assert.assertEquals(0, errors.size());
+		}
 	}
 }

@@ -16,6 +16,7 @@ import bsh.ParseException;
 import bsh.Parser;
 import bsh.ParserTokenManager;
 import bsh.Token;
+import bsh.TokenMgrException;
 
 public class Linter {
 	/**
@@ -87,27 +88,24 @@ public class Linter {
 		
 		BufferedReader br = new BufferedReader(reader); // Remove any lines with unmatched double quotes so the lexer doesn't blow up
 		StringBuilder builder = new StringBuilder(); // This will hold a cleaned copy of the script
-		int currLine = 1; // Keep track of the current line
 		String line = null;
-		while ( (line = br.readLine()) != null ) {
-			if ( line.split("\"").length % 2 == 0 ) { // We can split on double quotes and if the length is odd then we have open double quotes
-				errors.put(String.valueOf(currLine), "Missing double quotes"); // Add the line with the missing double quotes to the errors
-			} else {
-				builder.append(line);
-			}
-			builder.append("\n"); // Append a new line so that we can build proper vectors
-			currLine++; // On to the next line
-		}
+		while ( (line = br.readLine()) != null )
+			builder.append(line).append("\n"); // Append a new line so that we can build proper vectors
 		br.close();
-		
-		
+
 		ParserTokenManager ptk = new ParserTokenManager(new JavaCharStream(new StringReader(builder.toString()))); // Leverage the ptk as a lexer
 		Token token = ptk.getNextToken(); // Current token from reader
 		boolean hasLeftBrace = false; // We'll use this to track vectors that are method bodies
 		boolean hasWhileStatement = false; // We'll use this to track vectors for do-while statements
 		Vector<Token> vector = new Vector<Token>(); // Current vector being built
 		while ( token != null && token.kind != ParserTokenManager.EOF ) { // End the loop once we hit the end-of-file
-			Token nextToken = ptk.getNextToken();
+			Token nextToken = null;
+			try {
+				nextToken = ptk.getNextToken();
+			} catch (TokenMgrException e) {
+				addError(vector, "", e.getMessage(), errors);
+				nextToken = new Token(ParserTokenManager.SEMICOLON, ";");
+			}
 			vector.add(token);
 			// Check if we are at a statement end or method declaration end
 			if ( ( token.kind == ParserTokenManager.RBRACE 
@@ -127,7 +125,7 @@ public class Linter {
 		} // End while loop
 		return vectors;
 	}
-	
+
 	/**
 	 * Method for parsing the error encountered by the BeanShell Parser and determining the
 	 * line value for where this exception was thrown. This method will then add the error
@@ -140,16 +138,24 @@ public class Linter {
 	 */
 	private static void addError(Vector<Token> originalVector, String evaluatedScript, String error, Map<String,String> errors) throws IOException {
 		// Error messages will be in the format of
-		// error: Parse error at line #, column #.  <cause>
-		String[] values = error.split("\\."); // So we'll split on the '.'
-		values[0] = values[0].replaceFirst("[0-9]", "").replaceAll("\\D", ""); // get the column number so we can find the token
-		values[1] = values[1].trim(); // Clean up the error message
+		// In file: <unknown> <cause>  at line #, column #.
+		int line = error.indexOf(" at line") + 9;
+		line = Integer.valueOf(error.substring(line).replaceFirst("[, ].*$", "").trim());
+		int column = error.indexOf(", column") + 9;
+		column = Integer.valueOf(error.substring(column).replaceFirst("\\..*$","").trim());
+		error = error.substring(error.indexOf("Encountered"));
+		error = error.replaceFirst(" at line.*$", "").trim();
+		if (null == evaluatedScript || evaluatedScript.isEmpty() ) {
+			errors.put(String.valueOf(line), error); // Add the line #/error message pair
+			return;
+		}
+
 		List<Vector<Token>> vectors = getVectors(new StringReader(evaluatedScript), errors); // turn the erroneous script into a token vector
 		for (Token errorToken : vectors.get(0)) {
-			if ( errorToken.beginColumn == Integer.valueOf(values[0]) ) { // We found our erroneous token
+			if ( errorToken.beginColumn == column ) { // We found our erroneous token
 				for (Token token : originalVector) { // Now to find the original token...
 					if ( errorToken.image.equals(token.image) ) {
-						errors.put(String.valueOf(token.beginLine), values[1]); // Add the line #/error message pair
+						errors.put(String.valueOf(token.beginLine), error); // Add the line #/error message pair
 						break;
 					}
 				}
