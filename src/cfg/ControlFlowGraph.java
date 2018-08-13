@@ -90,13 +90,63 @@ public class ControlFlowGraph {
 	
 	public Map<String,Object> evalCoverage(Map<String,Object> args) {
 		Map<String,Object> map = new HashMap<String,Object>();
-		if ( this.getBlocks("global") != null 
-				&& !this.getBlocks("global").isEmpty() ) {
+		map.put("totalBlocks", this.blocks.size());
+		
+		int edges = 0;
+		for (Block block : this.edges.keySet()) {
+			edges += this.edges.get(block).size();
 		}
+		map.put("totalEdges", edges);
+		edges = 0;
+		
+		Vector<Block> visitedBlocks = new Vector<Block>();
+		if ( this.getBlocks("global") != null ) {
+			Block currBlock = this.getBlocks("global").get(0);
+			while ( currBlock != null ) {
+				visitedBlocks.add(currBlock);
+				Set<Block> currEdges = this.edges.get(currBlock);
+				if ( "global".equals(currBlock.getScope()) 
+						&& ( currEdges == null || currEdges.isEmpty() ) ) break;
+				else if ( !"global".equals(currBlock.getScope()) 
+						&& currBlock.containsReturn() 
+						&& ( currEdges == null || currEdges.isEmpty() ) ) {
+					Block callingBlock = null;
+					for (int i = visitedBlocks.indexOf(currBlock); i > -1; i--) {
+						if ( this.edges.keySet().contains(visitedBlocks.get(i)) 
+								&& this.edges.get(visitedBlocks.get(i)).contains(currBlock) ) {
+							callingBlock = visitedBlocks.get(i);
+							break;
+						}
+					}
+					if ( callingBlock != null ) {
+						boolean foundCurr = false;
+						for (Block edgeFromCalling : this.edges.get(callingBlock)) {
+							if ( currBlock.equals(edgeFromCalling) ) {
+								foundCurr = true;
+							} else if ( foundCurr ) {
+								currBlock = edgeFromCalling;
+								break;
+							}
+						}
+					}
+				} else if ( currEdges != null && !currEdges.isEmpty() ){
+					for (Block block : currEdges) {
+						currBlock = block;
+						break;
+					}
+				} else {
+					currBlock = null;
+				}
+			}
+		}
+		
+		map.put("visitedBlocks", visitedBlocks);
+		map.put("totalVisistedBlocks", visitedBlocks.size());
+		map.put("totalVistedEdges", edges);
 		return map;
 	}
 	
-	public static class Block implements Comparable {
+	public static class Block implements Comparable<Block> {
 		private int startPosition, endPosition;
 		private boolean containsReturn, isLogical;
 		private Vector<Token> tokens;
@@ -194,7 +244,7 @@ public class ControlFlowGraph {
 		}
 		
 		@Override
-		public int compareTo(Object anotherBlock) {
+		public int compareTo(Block anotherBlock) {
 			if ( anotherBlock instanceof Block )
 				return new Integer(this.getEndPosition())
 						.compareTo(new Integer(((Block) anotherBlock).getEndPosition()));
