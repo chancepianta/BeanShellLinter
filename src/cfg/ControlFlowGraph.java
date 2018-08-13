@@ -119,19 +119,24 @@ public class ControlFlowGraph {
 						}
 					}
 					if ( callingBlock != null ) {
+						Block nextBlock = null;
 						boolean foundCurr = false;
 						for (Block edgeFromCalling : this.edges.get(callingBlock)) {
 							if ( currBlock.equals(edgeFromCalling) ) {
 								foundCurr = true;
-							} else if ( foundCurr ) {
-								currBlock = edgeFromCalling;
+							} else if ( foundCurr 
+									&& !edgeFromCalling.getScope().equals(currBlock.getScope()) ) {
+								nextBlock = edgeFromCalling;
 								break;
 							}
 						}
+						if ( nextBlock != null ) edges++;
+						currBlock = nextBlock;
 					}
 				} else if ( currEdges != null && !currEdges.isEmpty() ){
 					for (Block block : currEdges) {
 						currBlock = block;
+						edges++;
 						break;
 					}
 				} else {
