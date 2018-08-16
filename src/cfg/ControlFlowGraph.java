@@ -6,6 +6,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.Vector;
 
+import bsh.EvalError;
+import bsh.Interpreter;
 import bsh.ParserTokenManager;
 import bsh.Token;
 
@@ -88,7 +90,7 @@ public class ControlFlowGraph {
 		}
 	}
 	
-	public Map<String,Object> evalCoverage(Map<String,Object> args) {
+	public Map<String,Object> evalCoverage(Map<String,Object> args) throws EvalError {
 		Map<String,Object> map = new HashMap<String,Object>();
 		map.put("totalBlocks", this.blocks.size());
 		
@@ -98,6 +100,11 @@ public class ControlFlowGraph {
 		}
 		map.put("totalEdges", edges);
 		edges = 0;
+		
+		Interpreter interpreter = new Interpreter();
+		for (String key : args.keySet()) {
+			interpreter.set(key, args.get(key));
+		}
 		
 		Vector<Block> visitedBlocks = new Vector<Block>();
 		if ( this.getBlocks("global") != null ) {
@@ -112,8 +119,7 @@ public class ControlFlowGraph {
 						&& ( currEdges == null || currEdges.isEmpty() ) ) {
 					Block callingBlock = null;
 					for (int i = visitedBlocks.indexOf(currBlock); i > -1; i--) {
-						if ( this.edges.keySet().contains(visitedBlocks.get(i)) 
-								&& this.edges.get(visitedBlocks.get(i)).contains(currBlock) ) {
+						if ( !visitedBlocks.get(i).getScope().equals(currBlock.getScope()) ) {
 							callingBlock = visitedBlocks.get(i);
 							break;
 						}
@@ -135,6 +141,29 @@ public class ControlFlowGraph {
 					}
 				} else if ( currEdges != null && !currEdges.isEmpty() ){
 					for (Block block : currEdges) {
+						if ( block.isLogical() && !block.toString().contains("else") ) {
+							StringBuilder builder = new StringBuilder();
+							builder.append("return");
+							boolean haveLParen = false;
+							for (int i = 0; i < block.getTokens().size(); i++) {
+								Token token = block.getTokens().get(i);
+								if ( token.kind == ParserTokenManager.LPAREN
+										&& !haveLParen ) {
+									haveLParen = true;
+								} else if ( token.kind == ParserTokenManager.RPAREN
+										&& block.getTokens().get(i + 1).kind == ParserTokenManager.LBRACE ) {
+									break;
+								} else if ( haveLParen ) {
+									builder.append(" " + block.getTokens().get(i));
+								}
+							}
+							builder.append(";");
+							Object returnValue = interpreter.eval(builder.toString());
+							if ( returnValue == null 
+									|| !Boolean.valueOf(returnValue.toString()) ) {
+								continue;
+							}
+						}
 						currBlock = block;
 						edges++;
 						break;
